@@ -1,10 +1,15 @@
-import type {AgentCheckpointListItem, AgentCheckpointProvider, NamedAgentCheckpoint, StoredAgentCheckpoint} from "@tokenring-ai/checkpoint/AgentCheckpointProvider";
-import {z} from "zod";
+import type {
+	AgentCheckpointListItem,
+	AgentCheckpointProvider,
+	NamedAgentCheckpoint,
+	StoredAgentCheckpoint,
+} from "@tokenring-ai/checkpoint/AgentCheckpointProvider";
+import { z } from "zod";
 
 const DEFAULT_AGENT_STATE_PREFIX = "tokenRingAgentState_v1_";
 
 export const BrowserAgentStateStorageOptionsSchema = z.object({
-  storageKeyPrefix: z.string().optional().default(DEFAULT_AGENT_STATE_PREFIX),
+	storageKeyPrefix: z.string().optional().default(DEFAULT_AGENT_STATE_PREFIX),
 });
 
 /**
@@ -37,7 +42,9 @@ export default class BrowserAgentStateStorage
 	 * Creates a new BrowserAgentStateStorage instance.
 	 * @param storageKeyPrefix - Optional prefix for localStorage keys to achieve isolation.
 	 */
-	constructor({ storageKeyPrefix } : z.infer<typeof BrowserAgentStateStorageOptionsSchema>) {
+	constructor({
+		storageKeyPrefix,
+	}: z.infer<typeof BrowserAgentStateStorageOptionsSchema>) {
 		this.storageKeyPrefix = storageKeyPrefix || DEFAULT_AGENT_STATE_PREFIX;
 		console.log(
 			`BrowserAgentStateStorage initialized with prefix: '${this.storageKeyPrefix}'`,
