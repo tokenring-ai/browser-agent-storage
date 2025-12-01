@@ -3,12 +3,10 @@
 	"description": "Provides browser-based agent state storage for the TokenRing ecosystem.",
 	"version": "0.1.0",
 	"dependencies": {
-		"@tokenring-ai/agent": "0.1.0"
+		"@tokenring-ai/agent": "0.1.0",
+  "@tokenring-ai/app": "0.1.0"
 	},
 	"license": "MIT",
 	"main": "index.ts",
-	"type": "module",
-	"scripts": {
-		"eslint": "eslint --fix ./"
-	}
+	"type": "module"
 }

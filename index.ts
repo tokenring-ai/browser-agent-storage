@@ -1,4 +1,4 @@
-import { AgentTeam, TokenRingPackage } from "@tokenring-ai/agent";
+import TokenRingApp, {TokenRingPlugin} from "@tokenring-ai/app";
 import { CheckpointPackageConfigSchema } from "@tokenring-ai/checkpoint";
 import AgentCheckpointService from "@tokenring-ai/checkpoint/AgentCheckpointService";
 import BrowserAgentStateStorage, {
@@ -8,18 +8,18 @@ import packageJSON from "./package.json" with { type: "json" };
 
 export { default as BrowserAgentStateStorage } from "./BrowserAgentStateStorage.ts";
 
-export const packageInfo: TokenRingPackage = {
+export default {
 	name: packageJSON.name,
 	version: packageJSON.version,
 	description: packageJSON.description,
-	install(agentTeam: AgentTeam) {
-		const config = agentTeam.getConfigSlice(
+	install(app: TokenRingApp) {
+		const config = app.getConfigSlice(
 			"checkpoint",
 			CheckpointPackageConfigSchema,
 		);
 
 		if (config) {
-			agentTeam.services
+			app.services
 				.waitForItemByType(AgentCheckpointService)
 				.then((checkpointService) => {
 					for (const name in config.providers) {
@@ -36,4 +36,4 @@ export const packageInfo: TokenRingPackage = {
 				});
 		}
 	},
-};
+} as TokenRingPlugin;
