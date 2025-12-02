@@ -1,176 +1,321 @@
-# @token-ring/browser-chat-storage
+# @tokenring-ai/browser-agent-storage
 
-Browser-local storage utilities for chat applications in the Token Ring ecosystem.
+Browser-based agent state storage for the TokenRing ecosystem.
 
-This package provides browser-based implementations backed by `localStorage` for:
-- Chat history and sessions (BrowserChatHistoryService)
-- Conversation checkpoints (BrowserCheckpointService)
-- A lightweight message store compatible with `ChatMessageStorage` (BrowserChatMessageStorage)
-- Agent state checkpoints (BrowserAgentStateStorage)
-
-It is designed for client-side persistence in web apps, without a backend database.
+This package provides a browser-local storage implementation for agent state checkpoints using `localStorage`. It serves as a persistent storage provider for agent checkpoints in client-side applications.
 
 ## Features
 
-- Stores chat sessions and messages in `localStorage`
-- Create, rename, delete, and list chat sessions
-- Add messages and retrieve recent messages per session
-- Basic full-text search within a session
-- Per-session checkpoints for quick restores
-- Simple message storage that can auto-create a session from the first prompt
-- Optional key prefixing/instance IDs to namespace data
+- **Browser-based storage**: Uses `localStorage` for persistent agent state storage
+- **Checkpoint management**: Create, retrieve, list, and delete agent checkpoints
+- **Agent-specific isolation**: Supports multiple agents with proper namespace separation
+- **Plugin integration**: Integrates seamlessly with the TokenRing application framework
+- **Type-safe**: Full TypeScript support with Zod validation for configuration
 
 ## When to use this package
 
-Use this package if you are building a purely client-side chat experience where data can live in the browser. If you need server-side persistence, multi-device sync, or large histories, consider using a server-backed storage instead.
+Use this package when building client-side applications that need to persist agent state checkpoints in the browser. It's ideal for:
+- Web applications requiring local agent state persistence
+- Development and testing environments
+- Client-side agents that need to maintain state between sessions
+- Applications where server-side storage is not available or desired
 
 ## Installation
 
-This package is part of the monorepo and is consumed as a workspace dependency. In an external project you would install it via npm:
+This package is part of the TokenRing monorepo and can be consumed as a workspace dependency. In an external project, you would install it via npm:
 
 ```bash
-npm install @token-ring/browser-chat-storage
+npm install @tokenring-ai/browser-agent-storage
 ```
 
 ## Quick start
 
+### Basic Usage
+
 ```ts
-import {
-  BrowserChatHistoryService,
-  BrowserCheckpointService,
-  BrowserChatMessageStorage,
-  BrowserAgentStateStorage,
-} from "@token-ring/browser-chat-storage";
+import BrowserAgentStateStorage from "@tokenring-ai/browser-agent-storage";
 
-// History: manage sessions and per-session messages
-const history = new BrowserChatHistoryService("myApp_"); // optional prefix
-const session = await history.createSession("My First Chat");
-await history.addMessage(session.id, { role: "user", content: "Hello" });
-const recent = await history.getRecentMessages(session.id, 10);
+// Create a storage instance with custom prefix
+const storage = new BrowserAgentStateStorage({
+  storageKeyPrefix: "myApp_agentState_"
+});
 
-// Checkpoints: snapshot a conversation state for a session
-const checkpoints = new BrowserCheckpointService("tab42"); // optional instanceId
-const cp = await checkpoints.createCheckpoint(
-  "After greeting",
-  { id: "msg-1", content: "Hello" },
-  session.id,
-);
-const latestCp = await checkpoints.retrieveCheckpoint(0, session.id); // index 0 = newest
-
-// Message storage: store a request/response pair, auto-creating a session if missing
-const messageStore = new BrowserChatMessageStorage({ storagePrefix: "chat_" });
-const stored = await messageStore.storeChat(
-  /* currentMessage */ {},
-  /* request */ { messages: [{ role: "user", content: "Hi there" }] },
-  /* response */ { content: "Hello! How can I help?" },
-);
-
-// Agent state storage: store and retrieve agent checkpoints
-const agentStorage = new BrowserAgentStateStorage("myApp_"); // optional prefix
-const checkpointId = await agentStorage.storeCheckpoint({
+// Store a checkpoint
+const checkpoint = {
   agentId: "agent-123",
   name: "After processing step 1",
   state: { currentStep: 1, data: { foo: "bar" } },
-  createdAt: Date.now(),
-});
-const checkpoint = await agentStorage.retrieveCheckpoint(checkpointId);
-const allCheckpoints = await agentStorage.listCheckpoints();
+  createdAt: Date.now()
+};
+
+const checkpointId = await storage.storeCheckpoint(checkpoint);
+console.log(`Checkpoint stored with ID: ${checkpointId}`);
+
+// Retrieve the checkpoint
+const retrieved = await storage.retrieveCheckpoint(checkpointId);
+console.log("Retrieved checkpoint:", retrieved);
+
+// List all checkpoints
+const allCheckpoints = await storage.listCheckpoints();
+console.log("All checkpoints:", allCheckpoints);
+
+// Delete a specific checkpoint
+const deleted = await storage.deleteCheckpoint(checkpointId);
+console.log(`Checkpoint deleted: ${deleted}`);
+
+// Clear all checkpoints
+await storage.clearAllCheckpoints();
 ```
 
-## API overview
+### Plugin Integration
 
-### BrowserChatHistoryService
+When used as a plugin in the TokenRing application framework:
 
-Constructor
-- `new BrowserChatHistoryService(storageKeyPrefix?: string)`
+```ts
+import TokenRingApp from "@tokenring-ai/app";
+import browserAgentStorage from "@tokenring-ai/browser-agent-storage";
 
-Sessions
-- `listSessions(): Promise<any[]>` — newest first
-- `createSession(name?: string): Promise<any>`
-- `deleteSession(sessionId: string | number): Promise<boolean>`
-- `renameSession(sessionId: string | number, newName: string): Promise<any | null>`
+const app = new TokenRingApp({
+  // ... app configuration
+});
 
-Messages
-- `addMessage(sessionId: string | number, message: any): Promise<any>`
-- `getRecentMessages(sessionId: string | number, limit?: number): Promise<any[]>`
-- `clearSessionHistory(sessionId: string | number): Promise<void>`
-- `getThreadTree(sessionId: string | number): Promise<any[]>` — currently returns a flat list
-- `searchMessages(keyword: string, sessionId: string | number): Promise<any[]>`
+// Register the plugin
+app.use(browserAgentStorage);
 
-Notes
-- Session metadata tracks `lastActivity` and a short `previewText` derived from the last message.
-- Message keys are namespaced by the provided `storageKeyPrefix`.
+// The plugin will automatically register browser storage providers
+// based on the checkpoint package configuration
+```
 
-### BrowserCheckpointService
-
-Constructor
-- `new BrowserCheckpointService(instanceId?: string)` — prefixes checkpoint keys with `"{instanceId}_"` when provided.
-
-Checkpoints
-- `createCheckpoint(label: string, currentMessage: any, sessionId: string | number): Promise<any>`
-- `retrieveCheckpoint(idOrIdx: string | number, sessionId: string | number): Promise<any | null>` — accepts an ID or a numeric index (0 = newest)
-- `listCheckpoint(sessionId: string | number): Promise<any[]>` — newest first
-- `clearAllCheckpoints(sessionId: string | number): Promise<void>`
-
-### BrowserChatMessageStorage
-
-Extends `ChatMessageStorage` from `@token-ring/ai-client`.
-
-Constructor
-- `new BrowserChatMessageStorage(options?: { storagePrefix?: string })`
-
-Storage operations
-- `storeChat(currentMessage: any, request: any, response: any): Promise<any>` — stores a message; auto-creates a session from the last request message (first 100 chars used as title) when `currentMessage.sessionId` is missing
-- `retrieveMessageById(id: string | number): Promise<any>`
-- `retrieveMessagesBySession(sessionId: string | number): Promise<any[]>`
-- `retrieveAllSessions(): Promise<any[]>`
-- `clearAllData(): Promise<void>` — removes sessions, messages, and counters and re-initializes the store
+## API Reference
 
 ### BrowserAgentStateStorage
 
-Implements `AgentCheckpointProvider` from `@tokenring-ai/agent`.
+A browser-based implementation of `AgentCheckpointProvider` that uses `localStorage` for persistent storage.
 
-Constructor
-- `new BrowserAgentStateStorage(storageKeyPrefix?: string)` — prefixes checkpoint keys with the provided prefix
+#### Constructor
 
-Checkpoint operations
-- `storeCheckpoint(checkpoint: NamedAgentCheckpoint): Promise<string>` — stores a checkpoint and returns its ID
-- `retrieveCheckpoint(checkpointId: string): Promise<StoredAgentCheckpoint | null>` — retrieves a checkpoint by ID
-- `listCheckpoints(): Promise<AgentCheckpointListItem[]>` — lists all checkpoints (newest first)
-- `deleteCheckpoint(checkpointId: string): Promise<boolean>` — deletes a specific checkpoint
-- `clearAllCheckpoints(): Promise<void>` — removes all checkpoints
+```ts
+new BrowserAgentStateStorage(options: BrowserAgentStateStorageOptions)
+```
 
-## Storage layout (localStorage keys)
+**Parameters:**
+- `options.storageKeyPrefix` (optional, default: `"tokenRingAgentState_v1_"`) - Prefix for localStorage keys to achieve isolation
 
-Exact keys depend on the constructor options:
+#### Methods
 
-BrowserChatHistoryService
-- Sessions list: `{storageKeyPrefix}sessions_v1`
-- Messages per session: `{storageKeyPrefix}history_{sessionId}`
+##### `storeCheckpoint(checkpoint: NamedAgentCheckpoint): Promise<string>`
 
-BrowserCheckpointService
-- Checkpoints per session: `{instanceId_}tokenRingCheckpoints_v1_{sessionId}` (the `{instanceId_}` prefix is included only when you pass an `instanceId`)
+Stores a new checkpoint for an agent.
 
-BrowserChatMessageStorage (prefix defaults to `chat_`)
-- Sessions: `{storagePrefix}sessions`
-- Messages: `{storagePrefix}messages`
-- Counters: `{storagePrefix}counters` with `{ sessionId, messageId }`
+**Parameters:**
+- `checkpoint`: `NamedAgentCheckpoint` - The checkpoint to store
 
-BrowserAgentStateStorage (prefix defaults to `tokenRingAgentState_v1_`)
-- All checkpoints: `{storageKeyPrefix}checkpoints`
+**Returns:** `Promise<string>` - The ID of the stored checkpoint
+
+**Example:**
+```ts
+const checkpointId = await storage.storeCheckpoint({
+  agentId: "agent-123",
+  name: "Processing complete",
+  state: { step: 5, result: "success" },
+  createdAt: Date.now()
+});
+```
+
+##### `retrieveCheckpoint(checkpointId: string): Promise<StoredAgentCheckpoint | null>`
+
+Retrieves a checkpoint by its ID.
+
+**Parameters:**
+- `checkpointId`: `string` - The checkpoint identifier
+
+**Returns:** `Promise<StoredAgentCheckpoint | null>` - The retrieved checkpoint or null if not found
+
+**Example:**
+```ts
+const checkpoint = await storage.retrieveCheckpoint("agent-123_1700000000000");
+```
+
+##### `listCheckpoints(): Promise<AgentCheckpointListItem[]>`
+
+Lists all checkpoints ordered by creation time (newest first).
+
+**Returns:** `Promise<AgentCheckpointListItem[]>` - Array of checkpoint list items
+
+**Example:**
+```ts
+const checkpoints = await storage.listCheckpoints();
+console.log(checkpoints.map(cp => ({
+  id: cp.id,
+  name: cp.name,
+  agentId: cp.agentId,
+  createdAt: new Date(cp.createdAt).toISOString()
+})));
+```
+
+##### `deleteCheckpoint(checkpointId: string): Promise<boolean>`
+
+Deletes a specific checkpoint by ID.
+
+**Parameters:**
+- `checkpointId`: `string` - The checkpoint identifier to delete
+
+**Returns:** `Promise<boolean>` - True if checkpoint was deleted, false if not found
+
+**Example:**
+```ts
+const deleted = await storage.deleteCheckpoint("agent-123_1700000000000");
+console.log(`Checkpoint deleted: ${deleted}`);
+```
+
+##### `clearAllCheckpoints(): Promise<void>`
+
+Clears all checkpoints from storage.
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```ts
+await storage.clearAllCheckpoints();
+```
+
+##### `close(): void`
+
+Closes any resources used by the service. No-op for browser implementation as localStorage doesn't require explicit closing.
+
+**Returns:** `void`
+
+**Example:**
+```ts
+storage.close();
+```
+
+## Configuration
+
+### BrowserAgentStateStorageOptions
+
+```ts
+interface BrowserAgentStateStorageOptions {
+  storageKeyPrefix?: string;
+}
+```
+
+**Default storage key prefix:** `"tokenRingAgentState_v1_"`
+
+**Storage key format:** `{storageKeyPrefix}checkpoints`
+
+### Plugin Configuration
+
+When using the plugin, configure it in your TokenRing app's checkpoint package configuration:
+
+```json
+{
+  "checkpoint": {
+    "providers": {
+      "myBrowserStorage": {
+        "type": "browser",
+        "storageKeyPrefix": "myApp_"
+      }
+    }
+  }
+}
+```
+
+## Storage Details
+
+### localStorage Usage
+
+The package uses `localStorage` for persistence:
+
+- **Storage key**: `{storageKeyPrefix}checkpoints`
+- **Data format**: JSON array of `StoredAgentCheckpoint` objects
+- **Storage structure**:
+  ```typescript
+  [
+    {
+      id: "agentId_timestamp",
+      agentId: "agent-123",
+      name: "Checkpoint name",
+      state: { /* agent state */ },
+      createdAt: 1700000000000
+    }
+  ]
+  ```
+
+### Browser Compatibility
+
+- **Modern browsers**: Chrome, Firefox, Safari, Edge (localStorage support)
+- **Storage limits**: Typically ~5MB per origin (varies by browser)
+- **Same-origin policy**: Data is scoped to the specific origin/domain
+
+### Browser-Specific Features
+
+- **Automatic persistence**: Data persists across browser sessions
+- **No server dependency**: Works entirely client-side
+- **Immediate access**: Synchronous localStorage operations with async wrapper
 
 ## Limitations
 
-- Browser `localStorage` capacity is limited (typically ~5MB per origin)
-- Data is scoped to a specific browser and origin; no cross-device sync
-- No server-side backup or multi-user collaboration
-- `getThreadTree` is a placeholder returning a flat list
-- `getChatHistoryByMessageId` in BrowserChatHistoryService returns an empty array because the base interface lacks the required `sessionId`
+- **Storage capacity**: Limited by browser localStorage size (typically ~5MB per origin)
+- **Data scope**: Tied to specific browser and origin; no cross-device sync
+- **No backup**: No server-side backup or multi-user collaboration
+- **Privacy considerations**: Data persists until explicitly cleared by user or application
+- **Quota limits**: May hit storage limits in applications with large state data
 
-## TypeScript
+## Error Handling
 
-This package is authored in TypeScript and published as an ES module. Import types from the corresponding upstream packages if needed.
+The package includes error handling for common scenarios:
+
+- **localStorage errors**: Caught and logged to console
+- **JSON parsing errors**: Handled gracefully with fallback to empty array
+- **Invalid checkpoint IDs**: Returns null for non-existent checkpoints
+
+## TypeScript Support
+
+This package is authored in TypeScript and provides full type definitions:
+
+- Import types from `@tokenring-ai/checkpoint/AgentCheckpointProvider`
+- Configuration validation using Zod schemas
+- Strong typing for all API methods and return values
+
+## Development
+
+### Building
+
+```bash
+# Build the package
+npm run build
+
+# Run tests
+npm test
+
+# Run linting
+npm run lint
+
+# Type checking
+npm run type-check
+```
+
+### Testing
+
+The package includes comprehensive test coverage for all functionality.
 
 ## License
 
-MIT
+MIT License - see LICENSE file for details.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
+
+## Support
+
+For issues and questions:
+- Check the [GitHub Issues](https://github.com/your-repo/issues)
+- Review the [TokenRing documentation](https://docs.tokenring.ai)
+- Join the [community discussions](https://github.com/your-repo/discussions)
