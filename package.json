@@ -1,14 +1,14 @@
 {
-	"name": "@tokenring-ai/browser-agent-storage",
-	"description": "Provides browser-based agent state storage for the TokenRing ecosystem.",
-	"version": "0.2.0",
-	"dependencies": {
-		"@tokenring-ai/agent": "0.2.0",
-  "@tokenring-ai/app": "0.2.0",
-  "@tokenring-ai/checkpoint": "0.2.0",
-  "zod": "^4.1.13"
-	},
-	"license": "MIT",
-	"main": "index.ts",
-	"type": "module"
+  "name": "@tokenring-ai/browser-agent-storage",
+  "description": "Provides browser-based agent state storage for the TokenRing ecosystem.",
+  "version": "0.2.0",
+  "dependencies": {
+    "@tokenring-ai/agent": "0.2.0",
+    "@tokenring-ai/app": "0.2.0",
+    "@tokenring-ai/checkpoint": "0.2.0",
+    "zod": "^4.1.13"
+  },
+  "license": "MIT",
+  "main": "index.ts",
+  "type": "module"
 }
