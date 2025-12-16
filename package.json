@@ -6,7 +6,7 @@
     "@tokenring-ai/agent": "0.2.0",
     "@tokenring-ai/app": "0.2.0",
     "@tokenring-ai/checkpoint": "0.2.0",
-    "zod": "^4.1.13"
+    "zod": "catalog:"
   },
   "license": "MIT",
   "main": "index.ts",
