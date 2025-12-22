@@ -10,5 +10,19 @@
   },
   "license": "MIT",
   "main": "index.ts",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "vitest": "catalog:",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc --noEmit",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "exports": {
+    ".": "./index.ts",
+    "./*": "./*.ts"
+  }
 }
