@@ -5,6 +5,7 @@ import type {
 	StoredAgentCheckpoint,
 } from "@tokenring-ai/checkpoint/AgentCheckpointProvider";
 
+import { v4 as uuid } from 'uuid';
 import { z } from "zod";
 
 const DEFAULT_AGENT_STATE_PREFIX = "tokenRingAgentState_v1_";
@@ -102,13 +103,13 @@ export default class BrowserAgentStateStorage
 	async storeCheckpoint(checkpoint: NamedAgentCheckpoint): Promise<string> {
 		const checkpoints = this._getAllCheckpoints();
 		const now = Date.now();
-		const id = `${checkpoint.agentId}_${now}`;
+		const id = uuid();
 
 		const storedCheckpoint: StoredAgentCheckpoint = {
 			id,
 			agentId: checkpoint.agentId,
 			name: checkpoint.name,
-      config: checkpoint.config,
+			config: checkpoint.config,
 			state: checkpoint.state,
 			createdAt: checkpoint.createdAt || now,
 		};
@@ -143,7 +144,7 @@ export default class BrowserAgentStateStorage
 		const listItems: AgentCheckpointListItem[] = checkpoints.map((cp) => ({
 			id: cp.id,
 			name: cp.name,
-      config: cp.config,
+			config: cp.config,
 			agentId: cp.agentId,
 			createdAt: cp.createdAt,
 		}));
