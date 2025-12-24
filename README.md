@@ -14,11 +14,13 @@ The Browser Agent Storage package implements a browser-based storage provider fo
 - **Agent-specific Storage**: Maintains isolated storage per agent with configurable prefixes
 - **Cross-platform Compatibility**: Works across all modern browsers supporting localStorage
 - **Type-safe Implementation**: Full TypeScript support with Zod schema validation
+- **Error Handling**: Graceful handling of storage errors and data corruption
+- **Performance Optimization**: Efficient storage and retrieval operations
 
 ## Installation
 
 ```bash
-npm install @tokenring-ai/browser-agent-storage
+bun install @tokenring-ai/browser-agent-storage
 ```
 
 ## Package Structure
@@ -26,11 +28,13 @@ npm install @tokenring-ai/browser-agent-storage
 ```
 pkg/browser-agent-storage/
 ├── BrowserAgentStateStorage.ts    # Core storage implementation
-├── plugin.ts                      # TokenRing plugin integration
-├── index.ts                       # Module exports
-├── package.json                   # Package configuration
-├── vitest.config.ts              # Test configuration
-└── README.md                      # This documentation
+├── BrowserAgentStateStorage.test.ts # Unit tests
+├── integration.test.ts           # Integration tests
+├── plugin.ts                     # TokenRing plugin integration
+├── index.ts                      # Module exports
+├── package.json                  # Package configuration
+├── vitest.config.ts             # Test configuration
+└── README.md                     # This documentation
 ```
 
 ## Core Components
@@ -56,7 +60,7 @@ const storage = new BrowserAgentStateStorage({
 Checkpoints are stored in localStorage under the key: `{prefix}checkpoints`
 
 Each checkpoint contains:
-- `id`: Unique identifier generated from agentId and timestamp
+- `id`: Unique identifier generated using UUID
 - `agentId`: The agent identifier
 - `name`: Checkpoint name
 - `config`: Agent configuration at checkpoint time
@@ -89,7 +93,7 @@ console.log('Stored checkpoint:', checkpointId);
 const retrieved = await storage.retrieveCheckpoint(checkpointId);
 console.log('Retrieved checkpoint:', retrieved);
 
-// List all checkpoints
+// List all checkpoints (newest first)
 const allCheckpoints = await storage.listCheckpoints();
 console.log('All checkpoints:', allCheckpoints);
 
@@ -103,7 +107,7 @@ console.log('Deleted:', deleted);
 ```typescript
 import { BrowserAgentStateStorage } from '@tokenring-ai/browser-agent-storage';
 
-// Use custom prefix for isolation
+// Use custom prefix for isolation between applications
 const storage = new BrowserAgentStateStorage({
   storageKeyPrefix: 'myapp_v2_',
 });
@@ -129,6 +133,42 @@ const app = new TokenRingApp({
 });
 
 // The BrowserAgentStateStorage will be automatically registered
+```
+
+### Real-world Development Workflow
+
+```typescript
+import { BrowserAgentStateStorage } from '@tokenring-ai/browser-agent-storage';
+
+const storage = new BrowserAgentStateStorage({});
+
+// Simulate a typical development workflow
+const initialCheckpoint: NamedAgentCheckpoint = {
+  agentId: 'dev-agent-001',
+  name: 'initial-development',
+  config: { model: 'gpt-4', temperature: 0.7 },
+  state: { messages: [], context: { project: 'todo-app' } },
+  createdAt: Date.now() - 3600000,
+};
+
+const featureCheckpoint: NamedAgentCheckpoint = {
+  agentId: 'dev-agent-001',
+  name: 'feature-implementation',
+  config: { model: 'gpt-4', temperature: 0.8 },
+  state: { 
+    messages: [{ role: 'user', content: 'Implement todo feature' }],
+    context: { project: 'todo-app', phase: 'feature-development' }
+  },
+  createdAt: Date.now() - 1800000,
+};
+
+// Store checkpoints
+await storage.storeCheckpoint(initialCheckpoint);
+await storage.storeCheckpoint(featureCheckpoint);
+
+// List checkpoints (newest first)
+const checkpoints = await storage.listCheckpoints();
+console.log('Development checkpoints:', checkpoints);
 ```
 
 ## API Reference
@@ -220,6 +260,7 @@ Configure in your TokenRing app:
 - **@tokenring-ai/app**: TokenRing application framework
 - **@tokenring-ai/checkpoint**: Checkpoint management system
 - **zod**: Runtime type validation and schema definition
+- **uuid**: UUID generation for checkpoint IDs
 
 ## Development
 
@@ -228,13 +269,17 @@ Configure in your TokenRing app:
 The package includes Vitest configuration for testing:
 
 ```bash
-npm test
+vitest run
+```
+
+```bash
+bun run test:coverage
 ```
 
 ### Building
 
 ```bash
-npm run build
+bun run build
 ```
 
 ## Version History
@@ -243,13 +288,8 @@ npm run build
 - Browser localStorage implementation
 - Plugin system integration
 - TypeScript and Zod validation
+- Comprehensive test suite
 
 ## License
 
 MIT License - see package.json for details.
-
-## See Also
-
-- [@tokenring-ai/checkpoint](../checkpoint/README.md) - Checkpoint management system
-- [@tokenring-ai/agent](../agent/README.md) - Agent orchestration
-- [@tokenring-ai/app](../app/README.md) - Application framework
